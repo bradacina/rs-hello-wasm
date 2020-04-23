@@ -10,5 +10,24 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-wasm-bindgen = "*"
-#wee_alloc = "*"
+wee_alloc = "*"
+
+[dependencies.wasm-bindgen]
+version = "*"
+features = [
+  'serde-serialize'
+]
+
+[dependencies.serde]
+version = "*"
+features = ["derive"]
+
+[dependencies.web-sys]
+version = "*"
+features = [
+  'CanvasRenderingContext2d',
+  'Document',
+  'Element',
+  'HtmlCanvasElement',
+  'Window',
+]
