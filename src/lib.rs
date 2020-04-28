@@ -1,31 +1,34 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use serde::Serialize;
+// use serde::Serialize;
+use std::rc::Rc;
+use std::cell::RefCell;
 
-#[wasm_bindgen]
-pub fn hello() -> i32 {
-    2+2
+fn window() -> web_sys::Window {
+    web_sys::window().expect("no global `window` exists")
 }
 
-#[derive(Serialize)]
-struct Val {
-    hello: bool,
-    something: i32,
-    complex: String
-}
-
-#[wasm_bindgen]
-pub fn val() -> JsValue {
-
-    JsValue::from_serde(&
-        ("hello", true,
-        "something", 123,
-        "complex", "hello there"
-    )).unwrap()
+fn request_animation_frame(f: &Closure<dyn FnMut(f64)>) {
+    window()
+        .request_animation_frame(f.as_ref().unchecked_ref())
+        .expect("should register `requestAnimationFrame` OK");
 }
 
 #[wasm_bindgen]
-pub fn draw() {
+pub fn run() -> Result<(), JsValue> {
+    let f = Rc::new(RefCell::new(None));
+    let g = f.clone();
+
+    *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time:f64| {
+        draw(time);
+        request_animation_frame(f.borrow().as_ref().unwrap());
+    }) as Box<dyn FnMut(f64)>));
+
+   request_animation_frame(g.borrow().as_ref().unwrap());
+    Ok(())
+}
+
+pub fn draw(time: f64) {
     let width = 800f64;
     let height = 600f64;
 
@@ -45,4 +48,12 @@ pub fn draw() {
 
     context.set_fill_style(&JsValue::from_str("red"));
     context.fill_rect(0.0 ,0.0, width, height);
+
+    context.set_fill_style(&JsValue::from_str("black"));
+
+    context.fill_text(&time.to_string(), 10.0, 10.0).unwrap();
+
+    // web_sys::console::log_1(&"hello".into());
+    
 }
+
