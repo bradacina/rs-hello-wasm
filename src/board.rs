@@ -31,6 +31,9 @@ impl Board {
         }
     }
 
+    pub fn keydown(&mut self, event: &web_sys::KeyboardEvent) {}
+    pub fn keyup(&mut self, event: &web_sys::KeyboardEvent) {}
+
     pub fn draw(&self, context: &web_sys::CanvasRenderingContext2d) {
         // draw border
         context.set_stroke_style(&colors::BORDER.into());

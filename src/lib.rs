@@ -64,20 +64,46 @@ pub fn run() -> Result<(), JsValue> {
     let board_half_width: u32 = NUM_COLS * PIXELS_PER_CELL / 2;
     let half_screen: u32 = context.canvas().unwrap().width() / 2;
 
-    let board = Board::new(
+    let board = Rc::new(RefCell::new(Board::new(
         NUM_ROWS,
         NUM_COLS,
         PIXELS_PER_CELL,
         (half_screen - board_half_width) as f64,
         0f64,
-    );
+    )));
 
-    web_sys::console::log_1(&JsValue::from_serde(&board).unwrap());
+    {
+        let board1 = board.clone();
+        let board2 = board.clone();
+        let keydown_closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+            web_sys::console::log_2(&"got keypress".into(), &(&event).into());
+            board1.borrow_mut().keydown(&event);
+        }) as Box<dyn FnMut(_)>);
+
+        let keyup_closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+            web_sys::console::log_2(&"got keyup".into(), &(&event).into());
+            board2.borrow_mut().keyup(&event);
+        }) as Box<dyn FnMut(_)>);
+
+        let document = window().document().unwrap();
+
+        document
+            .add_event_listener_with_callback("keydown", keydown_closure.as_ref().unchecked_ref())
+            .unwrap();
+        keydown_closure.forget();
+
+        document
+            .add_event_listener_with_callback("keyup", keyup_closure.as_ref().unchecked_ref())
+            .unwrap();
+        keyup_closure.forget();
+    }
+
+    web_sys::console::log_1(&JsValue::from_serde(&board.clone().as_ref()).unwrap());
 
     // setup request animation closure
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time: f64| {
         draw(&context, time);
-        board.draw(&context);
+        board.borrow().draw(&context);
         request_animation_frame(f.borrow().as_ref().unwrap());
     }) as Box<dyn FnMut(f64)>));
 
