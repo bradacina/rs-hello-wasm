@@ -16,6 +16,8 @@ pub struct Board {
     active_piece: Bar,
 
     keys: Vec<String>,
+
+    pub stop: bool,
 }
 
 impl Board {
@@ -31,6 +33,7 @@ impl Board {
 
             active_piece: Bar::new(2, 2),
             keys: Vec::with_capacity(4),
+            stop: Default::default(),
         }
     }
 
@@ -40,6 +43,10 @@ impl Board {
     }
 
     pub fn keydown(&mut self, event: &web_sys::KeyboardEvent) {
+        if self.stop {
+            return;
+        }
+
         self.keys.push(event.code());
     }
 
