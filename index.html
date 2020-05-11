@@ -15,7 +15,7 @@
         // will "boot" the module and make it ready to use. Currently browsers
         // don't support natively imported WebAssembly as an ES module, but
         // eventually the manual initialization won't be required!
-        import init, { run as rr } from './hello_wasm.js';
+        import init, { run as rr }, stop from './hello_wasm.js';
 
         async function run() {
             // First up we need to actually load the wasm file, so we use the
@@ -50,10 +50,15 @@
             rr();
         }
 
+        function stop() {
+
+        }
+
         run();
     </script>
 
     <canvas class="canvas" id="canvas"></canvas>
+    <button onclick='stop()'>Stop</button>
 </body>
 
 </html>

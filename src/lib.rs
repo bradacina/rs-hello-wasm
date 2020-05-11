@@ -6,13 +6,14 @@ use std::rc::Rc;
 
 mod board;
 mod colors;
+mod geometry;
 mod pieces;
 
 use board::Board;
 
-const NUM_COLS: u32 = 10;
-const NUM_ROWS: u32 = 20;
-const PIXELS_PER_CELL: u32 = 30;
+const NUM_COLS: i32 = 10;
+const NUM_ROWS: i32 = 20;
+const PIXELS_PER_CELL: i32 = 30;
 
 fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
@@ -73,16 +74,10 @@ pub fn run() -> Result<(), JsValue> {
     )));
 
     {
-        let board1 = board.clone();
-        let board2 = board.clone();
+        let board1 = theBoard.clone();
         let keydown_closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             web_sys::console::log_2(&"got keypress".into(), &(&event).into());
             board1.borrow_mut().keydown(&event);
-        }) as Box<dyn FnMut(_)>);
-
-        let keyup_closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-            web_sys::console::log_2(&"got keyup".into(), &(&event).into());
-            board2.borrow_mut().keyup(&event);
         }) as Box<dyn FnMut(_)>);
 
         let document = window().document().unwrap();
@@ -91,19 +86,16 @@ pub fn run() -> Result<(), JsValue> {
             .add_event_listener_with_callback("keydown", keydown_closure.as_ref().unchecked_ref())
             .unwrap();
         keydown_closure.forget();
-
-        document
-            .add_event_listener_with_callback("keyup", keyup_closure.as_ref().unchecked_ref())
-            .unwrap();
-        keyup_closure.forget();
     }
 
-    web_sys::console::log_1(&JsValue::from_serde(&board.clone().as_ref()).unwrap());
+    web_sys::console::log_1(&JsValue::from_serde(&theBoard.clone().as_ref()).unwrap());
 
-    // setup request animation closure
+    // setup the request_animation_frame closure
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time: f64| {
-        draw(&context, time);
-        board.borrow().draw(&context);
+        let mut board = theBoard.borrow_mut();
+        board.process_input();
+        draw_background(&context, time);
+        board.draw(&context);
         request_animation_frame(f.borrow().as_ref().unwrap());
     }) as Box<dyn FnMut(f64)>));
 
@@ -111,9 +103,7 @@ pub fn run() -> Result<(), JsValue> {
     Ok(())
 }
 
-pub fn draw(context: &web_sys::CanvasRenderingContext2d, time: f64) {
-    static old_time: f64 = 0f64;
-
+pub fn draw_background(context: &web_sys::CanvasRenderingContext2d, time: f64) {
     context.set_fill_style(&JsValue::from_str("red"));
 
     let width = context.canvas().unwrap().width();

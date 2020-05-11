@@ -1,57 +1,43 @@
 use serde::Serialize;
 
 use crate::colors;
+use crate::geometry::{Position, Rect};
 
-pub struct Rect<T> {
-    pub x1: T,
-    pub y1: T,
-    pub x2: T,
-    pub y2: T,
+#[derive(Debug, Serialize, Copy, Clone)]
+pub struct Bar {
+    orientation: Orientation,
+    origin: Position,
 }
 
 #[derive(Debug, Serialize, Copy, Clone)]
-pub struct Position {
-    pub x: u32,
-    pub y: u32,
-}
-
-#[derive(Debug, Serialize)]
-pub struct Bar {
-    orientation: Orientation,
-    pub origin: Position,
-    pub attempted_origin: Position,
-}
-
-#[derive(Debug, Serialize)]
 enum Orientation {
     Horizontal,
     Vertical,
 }
 
 impl Bar {
-    pub fn new(x: u32, y: u32) -> Self {
+    pub fn new(x: i32, y: i32) -> Self {
         let origin = Position { x, y };
 
         Bar {
             orientation: Orientation::Vertical,
             origin,
-            attempted_origin: origin,
         }
     }
 
-    pub fn bounding_box(&self) -> Rect<u32> {
+    pub fn bounding_box(&self) -> Rect<i32> {
         match self.orientation {
             Orientation::Horizontal => Rect {
                 x1: self.origin.x - 1,
                 y1: self.origin.y,
-                x2: self.origin.x + 3,
+                x2: self.origin.x + 2,
                 y2: self.origin.y,
             },
             _ => Rect {
                 x1: self.origin.x,
                 y1: self.origin.y - 1,
                 x2: self.origin.x,
-                y2: self.origin.y + 3,
+                y2: self.origin.y + 2,
             },
         }
     }
@@ -67,9 +53,21 @@ impl Bar {
         }
     }
 
-    pub fn set_origin(&mut self, x: u32, y: u32) {
+    pub fn move_left(&mut self) {
+        self.origin.x -= 1;
+    }
+
+    pub fn move_right(&mut self) {
+        self.origin.x += 1;
+    }
+
+    pub fn set_origin(&mut self, x: i32, y: i32) {
         self.origin.x = x;
         self.origin.y = y;
+    }
+
+    pub fn get_origin(&self) -> Position {
+        self.origin
     }
 
     pub fn draw(
