@@ -1,9 +1,12 @@
-# TODO
+### TODO
 
+- timer tick that moves a piece down
 - antialiasing
 - how to build dom elements
 
-# Done
+### Done
 
+- start and stop buttons
+- detect keyboard key presses
 - Auto run
 - Draw to canvas
