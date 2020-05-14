@@ -86,9 +86,9 @@ pub fn run() -> Result<(), JsValue> {
             web_sys::console::log_2(&"got message event".into(), &(&event).into());
 
             match event.data().as_string().unwrap().as_ref() {
-                "stop" => board2.borrow_mut().stop = true,
+                "stop" => board2.borrow_mut().pause(),
                 "start" => {
-                    board2.borrow_mut().stop = false;
+                    board2.borrow_mut().resume();
                     request_animation_frame(h.borrow().as_ref().unwrap());
                 }
                 _ => (),
@@ -113,11 +113,12 @@ pub fn run() -> Result<(), JsValue> {
     // setup the request_animation_frame closure
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time: f64| {
         let mut board = the_board.borrow_mut();
-        if board.stop {
+        if board.is_paused() {
             return;
         }
 
         board.process_input();
+        board.update(time);
         draw_background(&context, time);
         board.draw(&context);
         request_animation_frame(f.borrow().as_ref().unwrap());

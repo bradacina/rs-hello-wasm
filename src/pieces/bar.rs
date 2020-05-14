@@ -42,6 +42,25 @@ impl Bar {
         }
     }
 
+    pub fn mask(&self) -> Vec<Position> {
+        match self.orientation {
+            Orientation::Horizontal => 
+            vec![
+                self.origin + (-1, 0), 
+                self.origin, 
+                self.origin + (1,0), 
+                self.origin + (2,0)
+            ],
+            Orientation::Vertical => 
+            vec![
+                self.origin + (0, -1), 
+                self.origin, 
+                self.origin + (0,1), 
+                self.origin+ (0,2)
+            ]
+        }
+    }
+
     pub fn rotate_left(&mut self) {
         self.rotate_right();
     }

@@ -1,6 +1,8 @@
 ### TODO
 
 - timer tick that moves a piece down
+- collision detection with other pieces on the board
+- square 
 - antialiasing
 - how to build dom elements
 
