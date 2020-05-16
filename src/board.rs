@@ -20,7 +20,7 @@ enum Move {
 pub struct Board {
     rows: i32,
     cols: i32,
-    cells: Vec<Vec<bool>>, // indexes are [col][row]
+    cells: Vec<Vec<bool>>, // indexes are [row][col]
     pixels_per_cell: i32,
     pixel_width: f64,
     pixel_height: f64,
@@ -38,8 +38,8 @@ pub struct Board {
 
 impl Board {
     pub fn new(rows: i32, cols: i32, pixels_per_cell: i32, origin_x: f64, origin_y: f64) -> Self {
-        let cells: Vec<Vec<bool>> = (0..cols)
-            .map(|_| (0..rows).map(|_| false).collect())
+        let cells: Vec<Vec<bool>> = (0..rows)
+            .map(|_| (0..cols).map(|_| false).collect())
             .collect();
 
         Board {
@@ -92,7 +92,7 @@ impl Board {
     fn place_piece(&mut self) {
         let mask = self.project_piece(&self.active_piece);
         for item in mask {
-            self.cells[item.x as usize][item.y as usize] = true;
+            self.cells[item.y as usize][item.x as usize] = true;
         }
 
         self.new_active_piece();
@@ -136,7 +136,7 @@ impl Board {
 
     fn is_colliding(&self, mask: &Vec<Position>) -> bool {
         for item in mask {
-            if self.cells[item.x as usize][item.y as usize] {
+            if self.cells[item.y as usize][item.x as usize] {
                 return true;
             }
         }
@@ -208,6 +208,20 @@ impl Board {
             self.try_drop();
             self.last_drop = time;
         }
+
+        // check for completed rows
+        let mut complete_rows : Vec<usize> = Vec::with_capacity(20);
+        for y in (0..(self.rows as usize)).rev() {
+            let is_complete = self.cells[y].iter().all(|val| *val);
+            if is_complete {
+                complete_rows.push(y);
+            }
+        }
+
+        for to_remove in complete_rows {
+            self.cells.remove(to_remove);
+            self.cells.insert(0, (0..self.cols).map(|_| false).collect());
+        }
     }
 
     fn try_drop(&mut self) {
@@ -225,7 +239,7 @@ impl Board {
         self.active_piece.set_origin(x, y);
         let mask = self.active_piece.mask();
         for item in mask {
-            self.cells[item.x as usize][item.y as usize] = true;
+            self.cells[item.y as usize][item.x as usize] = true;
         }
 
         self.new_active_piece();
@@ -286,8 +300,8 @@ impl Board {
         // draw pieces on the board
         context.set_fill_style(&"blue".into());
 
-        for (x, col) in self.cells.iter().enumerate() {
-            for (y, val) in col.iter().enumerate() {
+        for (y, row) in self.cells.iter().enumerate() {
+            for (x, val) in row.iter().enumerate() {
                 if *val {
                     context.fill_rect(
                         self.relative_x((x * self.pixels_per_cell as usize) as f64),
@@ -309,10 +323,12 @@ impl Board {
         );
 
         // draw the projection
-        context.begin_path();
         context.set_stroke_style(&colors::PROJECTION_STROKE.into());
         context.set_line_dash(&JsValue::from_serde(&vec![3,3]).unwrap()).unwrap();
+        context.begin_path();
+
         let mask = self.project_piece(&self.active_piece);
+
         for item in mask {
             context.move_to(self.origin_x + (item.x * self.pixels_per_cell) as f64, self.origin_y + (item.y * self.pixels_per_cell) as f64);
             context.line_to(self.origin_x + ((item.x+1) * self.pixels_per_cell) as f64, self.origin_y + (item.y * self.pixels_per_cell) as f64);

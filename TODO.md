@@ -1,6 +1,5 @@
 ### TODO
 
-- detect when rows are completed and remove them
 - color per each piece
 - board should keep color of each placed piece
 - square piece
@@ -15,6 +14,7 @@
 
 ### Done
 
+- detect when rows are completed and remove them
 - collision detection with other pieces on the board
 - timer tick that moves a piece down
 - start and stop buttons in html (dom)
