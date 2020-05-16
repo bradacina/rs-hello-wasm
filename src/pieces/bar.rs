@@ -1,4 +1,5 @@
 use serde::Serialize;
+use wasm_bindgen::prelude::*;
 
 use crate::colors;
 use crate::geometry::{Position, Rect};
@@ -96,6 +97,7 @@ impl Bar {
         origin_y: f64,
         pixels_per_cell: f64,
     ) {
+        context.set_line_dash(&JsValue::from_serde(&([] as [i32;0])).unwrap()).unwrap();
         context.begin_path();
 
         let bb: Rect<f64> = match self.orientation {

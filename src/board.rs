@@ -4,7 +4,7 @@ use crate::pieces::bar::Bar;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
-const DROP_TIME: f64 = 500f64;
+const DROP_TIME: f64 = 50000f64;
 
 enum Rotation {
     Left,
@@ -88,6 +88,7 @@ impl Board {
         }
     }
 
+    // sends the active piece to the bottom
     fn place_piece(&mut self) {
         let mask = self.project_piece(&self.active_piece);
         for item in mask {
@@ -97,25 +98,27 @@ impl Board {
         self.new_active_piece();
     }
 
-    /// projects a piece down to the lowest point it can reach
+    // projects a piece down to the lowest point it can reach
     fn project_piece(&self, piece: &Bar) -> Vec<Position> {
         let mut placed_piece = *piece;
         let (origin_x, origin_y) = placed_piece.get_origin().into();
+        
+        // todo: optimize this by projecting the mask down on the board
+        // until we encounter a piece or the edge
 
-        for y in (origin_y..self.rows).rev() {
+        for y in origin_y..self.rows {
             placed_piece.set_origin(origin_x, y);
 
             let bb = placed_piece.bounding_box();
-
-            if !self.is_inside_board(&bb) {
-                continue;
-            }
-
             let mask = placed_piece.mask();
 
-            if self.is_colliding(&mask) {
+            if self.is_inside_board(&bb) && !self.is_colliding(&mask) {
                 continue;
             }
+
+            assert!(y-1 >= origin_y);
+
+            placed_piece.set_origin(origin_x, y-1);
 
             break;
         }
@@ -198,7 +201,10 @@ impl Board {
     }
 
     pub fn update(&mut self, time: f64) {
-        if time - self.last_drop > DROP_TIME {
+        if self.last_drop == 0f64 {
+            self.last_drop = time;
+        }
+        else if time - self.last_drop > DROP_TIME {
             self.try_drop();
             self.last_drop = time;
         }
@@ -227,12 +233,14 @@ impl Board {
 
     fn new_active_piece(&mut self) {
         self.active_piece = Bar::new(self.cols / 2, 1);
+        self.last_drop = 0f64;
     }
 
     pub fn draw(&self, context: &web_sys::CanvasRenderingContext2d) {
         // draw border
         context.set_stroke_style(&colors::BORDER.into());
         context.set_line_width(1.0);
+        context.set_line_dash(&JsValue::from_serde(&([] as [i32;0])).unwrap()).unwrap();
         context.begin_path();
         context.move_to(self.relative_x(0.0), self.relative_y(0.0));
         context.line_to(self.relative_x(self.pixel_width), self.relative_y(0.0));
@@ -247,6 +255,7 @@ impl Board {
 
         // draw cross hatch
         context.begin_path();
+        context.set_line_dash(&JsValue::from_serde(&([] as [i32;0])).unwrap()).unwrap();
 
         for i in 1..self.cols {
             context.move_to(
@@ -290,8 +299,7 @@ impl Board {
             }
         }
 
-        // draw pieces
-
+        // draw active piece
         let origin = self.active_piece.get_origin();
         self.active_piece.draw(
             context,
@@ -299,6 +307,21 @@ impl Board {
             self.origin_y + (origin.y * self.pixels_per_cell) as f64,
             self.pixels_per_cell as f64,
         );
+
+        // draw the projection
+        context.begin_path();
+        context.set_stroke_style(&colors::PROJECTION_STROKE.into());
+        context.set_line_dash(&JsValue::from_serde(&vec![3,3]).unwrap()).unwrap();
+        let mask = self.project_piece(&self.active_piece);
+        for item in mask {
+            context.move_to(self.origin_x + (item.x * self.pixels_per_cell) as f64, self.origin_y + (item.y * self.pixels_per_cell) as f64);
+            context.line_to(self.origin_x + ((item.x+1) * self.pixels_per_cell) as f64, self.origin_y + (item.y * self.pixels_per_cell) as f64);
+            context.line_to(self.origin_x + ((item.x+1) * self.pixels_per_cell) as f64, self.origin_y + ((item.y+1) * self.pixels_per_cell) as f64);
+            context.line_to(self.origin_x + (item.x * self.pixels_per_cell) as f64, self.origin_y + ((item.y +1) * self.pixels_per_cell) as f64);
+            context.line_to(self.origin_x + (item.x * self.pixels_per_cell) as f64, self.origin_y + (item.y * self.pixels_per_cell) as f64);
+        }
+
+        context.stroke();
     }
 
     fn relative_x(&self, x: f64) -> f64 {
