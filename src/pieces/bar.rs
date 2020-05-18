@@ -1,16 +1,20 @@
+use crate::pieces::piece::ClonePiece;
+use crate::pieces::piece::Piece;
 use serde::Serialize;
+use serde_json;
+use std::fmt::Display;
 use wasm_bindgen::prelude::*;
 
 use crate::colors;
 use crate::geometry::{Position, Rect};
 
-#[derive(Debug, Serialize, Copy, Clone)]
+#[derive(Serialize, Copy, Clone)]
 pub struct Bar {
     orientation: Orientation,
     origin: Position,
 }
 
-#[derive(Debug, Serialize, Copy, Clone)]
+#[derive(Serialize, Copy, Clone)]
 enum Orientation {
     Horizontal,
     Vertical,
@@ -25,8 +29,22 @@ impl Bar {
             origin,
         }
     }
+}
 
-    pub fn bounding_box(&self) -> Rect<i32> {
+impl ClonePiece for Bar {
+    fn clone_piece(&self) -> Box<dyn Piece> {
+        Box::new(self.clone())
+    }
+}
+
+impl Display for Bar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        f.write_str(&serde_json::to_string(self).expect("could not convert to json"))
+    }
+}
+
+impl Piece for Bar {
+    fn bounding_box(&self) -> Rect<i32> {
         match self.orientation {
             Orientation::Horizontal => Rect {
                 x1: self.origin.x - 1,
@@ -43,61 +61,61 @@ impl Bar {
         }
     }
 
-    pub fn mask(&self) -> Vec<Position> {
+    fn mask(&self) -> Vec<Position> {
         match self.orientation {
-            Orientation::Horizontal => 
-            vec![
-                self.origin + (-1, 0), 
-                self.origin, 
-                self.origin + (1,0), 
-                self.origin + (2,0)
+            Orientation::Horizontal => vec![
+                self.origin + (-1, 0),
+                self.origin,
+                self.origin + (1, 0),
+                self.origin + (2, 0),
             ],
-            Orientation::Vertical => 
-            vec![
-                self.origin + (0, -1), 
-                self.origin, 
-                self.origin + (0,1), 
-                self.origin+ (0,2)
-            ]
+            Orientation::Vertical => vec![
+                self.origin + (0, -1),
+                self.origin,
+                self.origin + (0, 1),
+                self.origin + (0, 2),
+            ],
         }
     }
 
-    pub fn rotate_left(&mut self) {
+    fn rotate_left(&mut self) {
         self.rotate_right();
     }
 
-    pub fn rotate_right(&mut self) {
+    fn rotate_right(&mut self) {
         self.orientation = match self.orientation {
             Orientation::Horizontal => Orientation::Vertical,
             _ => Orientation::Horizontal,
         }
     }
 
-    pub fn move_left(&mut self) {
+    fn move_left(&mut self) {
         self.origin.x -= 1;
     }
 
-    pub fn move_right(&mut self) {
+    fn move_right(&mut self) {
         self.origin.x += 1;
     }
 
-    pub fn set_origin(&mut self, x: i32, y: i32) {
+    fn set_origin(&mut self, x: i32, y: i32) {
         self.origin.x = x;
         self.origin.y = y;
     }
 
-    pub fn get_origin(&self) -> Position {
+    fn get_origin(&self) -> Position {
         self.origin
     }
 
-    pub fn draw(
+    fn draw(
         &self,
         context: &web_sys::CanvasRenderingContext2d,
         origin_x: f64,
         origin_y: f64,
         pixels_per_cell: f64,
     ) {
-        context.set_line_dash(&JsValue::from_serde(&([] as [i32;0])).unwrap()).unwrap();
+        context
+            .set_line_dash(&JsValue::from_serde(&([] as [i32; 0])).unwrap())
+            .unwrap();
         context.begin_path();
 
         let bb: Rect<f64> = match self.orientation {

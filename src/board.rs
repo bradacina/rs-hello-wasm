@@ -1,6 +1,8 @@
 use crate::colors;
 use crate::geometry::{Position, Rect};
-use crate::pieces::bar::Bar;
+use crate::pieces::{bar::Bar, square::Square};
+use crate::pieces::piece::Piece;
+use rand::prelude::*;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -8,15 +10,15 @@ const DROP_TIME: f64 = 50000f64;
 
 enum Rotation {
     Left,
-    Right
+    Right,
 }
 
 enum Move {
     Left,
-    Right
+    Right,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub struct Board {
     rows: i32,
     cols: i32,
@@ -27,7 +29,7 @@ pub struct Board {
     origin_x: f64, // x coord on context where the board resides
     origin_y: f64, // y coord on context where the board resides
 
-    active_piece: Bar,
+    active_piece: Box<dyn Piece>,
 
     keys: Vec<String>,
 
@@ -52,16 +54,11 @@ impl Board {
             origin_x,
             origin_y,
 
-            active_piece: Bar::new(2, 15),
+            active_piece: Box::new(Bar::new(2, 15)),
             keys: Vec::with_capacity(4),
             is_paused: Default::default(),
             last_drop: 0f64,
         }
-    }
-
-    pub fn set_origin(&mut self, x: f64, y: f64) {
-        self.origin_x = x;
-        self.origin_y = y;
     }
 
     pub fn keydown(&mut self, event: &web_sys::KeyboardEvent) {
@@ -99,10 +96,9 @@ impl Board {
     }
 
     // projects a piece down to the lowest point it can reach
-    fn project_piece(&self, piece: &Bar) -> Vec<Position> {
-        let mut placed_piece = *piece;
+    fn project_piece(&self, piece: &Box<dyn Piece>) -> Vec<Position> {
+        let mut placed_piece = piece.clone();
         let (origin_x, origin_y) = placed_piece.get_origin().into();
-        
         // todo: optimize this by projecting the mask down on the board
         // until we encounter a piece or the edge
 
@@ -116,9 +112,9 @@ impl Board {
                 continue;
             }
 
-            assert!(y-1 >= origin_y);
+            assert!(y - 1 >= origin_y);
 
-            placed_piece.set_origin(origin_x, y-1);
+            placed_piece.set_origin(origin_x, y - 1);
 
             break;
         }
@@ -145,11 +141,11 @@ impl Board {
     }
 
     fn rotate(&mut self, rotation: Rotation) {
-        let mut attempt = self.active_piece;
+        let mut attempt = self.active_piece.clone();
 
         match rotation {
             Rotation::Left => attempt.rotate_left(),
-            Rotation::Right => attempt.rotate_right()
+            Rotation::Right => attempt.rotate_right(),
         }
 
         let mut bb = attempt.bounding_box();
@@ -180,11 +176,11 @@ impl Board {
     }
 
     fn move_sideways(&mut self, direction: Move) {
-        let mut attempt = self.active_piece;
+        let mut attempt = self.active_piece.clone();
 
         match direction {
             Move::Left => attempt.move_left(),
-            Move::Right => attempt.move_right()
+            Move::Right => attempt.move_right(),
         }
 
         let bb = attempt.bounding_box();
@@ -203,14 +199,13 @@ impl Board {
     pub fn update(&mut self, time: f64) {
         if self.last_drop == 0f64 {
             self.last_drop = time;
-        }
-        else if time - self.last_drop > DROP_TIME {
+        } else if time - self.last_drop > DROP_TIME {
             self.try_drop();
             self.last_drop = time;
         }
 
         // check for completed rows
-        let mut complete_rows : Vec<usize> = Vec::with_capacity(20);
+        let mut complete_rows: Vec<usize> = Vec::with_capacity(20);
         for y in (0..(self.rows as usize)).rev() {
             let is_complete = self.cells[y].iter().all(|val| *val);
             if is_complete {
@@ -220,7 +215,8 @@ impl Board {
 
         for to_remove in complete_rows {
             self.cells.remove(to_remove);
-            self.cells.insert(0, (0..self.cols).map(|_| false).collect());
+            self.cells
+                .insert(0, (0..self.cols).map(|_| false).collect());
         }
     }
 
@@ -246,7 +242,13 @@ impl Board {
     }
 
     fn new_active_piece(&mut self) {
-        self.active_piece = Bar::new(self.cols / 2, 1);
+        let mut rng = thread_rng();
+        let next = rng.gen_range(0, 9);
+        if next > 5 {
+            self.active_piece = Box::new(Bar::new(self.cols / 2, 1));
+        } else {
+            self.active_piece = Box::new(Square::new(self.cols / 2, 1));
+        }
         self.last_drop = 0f64;
     }
 
@@ -254,7 +256,9 @@ impl Board {
         // draw border
         context.set_stroke_style(&colors::BORDER.into());
         context.set_line_width(1.0);
-        context.set_line_dash(&JsValue::from_serde(&([] as [i32;0])).unwrap()).unwrap();
+        context
+            .set_line_dash(&JsValue::from_serde(&([] as [i32; 0])).unwrap())
+            .unwrap();
         context.begin_path();
         context.move_to(self.relative_x(0.0), self.relative_y(0.0));
         context.line_to(self.relative_x(self.pixel_width), self.relative_y(0.0));
@@ -269,7 +273,9 @@ impl Board {
 
         // draw cross hatch
         context.begin_path();
-        context.set_line_dash(&JsValue::from_serde(&([] as [i32;0])).unwrap()).unwrap();
+        context
+            .set_line_dash(&JsValue::from_serde(&([] as [i32; 0])).unwrap())
+            .unwrap();
 
         for i in 1..self.cols {
             context.move_to(
@@ -324,17 +330,34 @@ impl Board {
 
         // draw the projection
         context.set_stroke_style(&colors::PROJECTION_STROKE.into());
-        context.set_line_dash(&JsValue::from_serde(&vec![3,3]).unwrap()).unwrap();
+        context
+            .set_line_dash(&JsValue::from_serde(&vec![3, 3]).unwrap())
+            .unwrap();
         context.begin_path();
 
         let mask = self.project_piece(&self.active_piece);
 
         for item in mask {
-            context.move_to(self.origin_x + (item.x * self.pixels_per_cell) as f64, self.origin_y + (item.y * self.pixels_per_cell) as f64);
-            context.line_to(self.origin_x + ((item.x+1) * self.pixels_per_cell) as f64, self.origin_y + (item.y * self.pixels_per_cell) as f64);
-            context.line_to(self.origin_x + ((item.x+1) * self.pixels_per_cell) as f64, self.origin_y + ((item.y+1) * self.pixels_per_cell) as f64);
-            context.line_to(self.origin_x + (item.x * self.pixels_per_cell) as f64, self.origin_y + ((item.y +1) * self.pixels_per_cell) as f64);
-            context.line_to(self.origin_x + (item.x * self.pixels_per_cell) as f64, self.origin_y + (item.y * self.pixels_per_cell) as f64);
+            context.move_to(
+                self.origin_x + (item.x * self.pixels_per_cell) as f64,
+                self.origin_y + (item.y * self.pixels_per_cell) as f64,
+            );
+            context.line_to(
+                self.origin_x + ((item.x + 1) * self.pixels_per_cell) as f64,
+                self.origin_y + (item.y * self.pixels_per_cell) as f64,
+            );
+            context.line_to(
+                self.origin_x + ((item.x + 1) * self.pixels_per_cell) as f64,
+                self.origin_y + ((item.y + 1) * self.pixels_per_cell) as f64,
+            );
+            context.line_to(
+                self.origin_x + (item.x * self.pixels_per_cell) as f64,
+                self.origin_y + ((item.y + 1) * self.pixels_per_cell) as f64,
+            );
+            context.line_to(
+                self.origin_x + (item.x * self.pixels_per_cell) as f64,
+                self.origin_y + (item.y * self.pixels_per_cell) as f64,
+            );
         }
 
         context.stroke();

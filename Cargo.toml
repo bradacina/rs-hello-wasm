@@ -11,6 +11,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 wee_alloc = "*"
+serde_json = "*"
+rand = { version = "*", features = ["wasm-bindgen"] }
 
 [dependencies.wasm-bindgen]
 version = "*"

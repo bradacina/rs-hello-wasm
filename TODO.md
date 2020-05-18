@@ -2,7 +2,6 @@
 
 - color per each piece
 - board should keep color of each placed piece
-- square piece
 - z piece
 - triangle piece
 - add NEGATIVE pieces (pieces that remove things from the board when being placed)
@@ -14,6 +13,7 @@
 
 ### Done
 
+- square piece
 - detect when rows are completed and remove them
 - collision detection with other pieces on the board
 - timer tick that moves a piece down
