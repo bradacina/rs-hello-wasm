@@ -1,9 +1,11 @@
 ### TODO
 
+- triangle piece
+- timers for effects
 - color per each piece
 - board should keep color of each placed piece
-- z piece
-- triangle piece
+- score board
+- losing condition
 - add NEGATIVE pieces (pieces that remove things from the board when being placed)
 - antialiasing?
 - handle mouse
@@ -13,6 +15,8 @@
 
 ### Done
 
+- z pieces
+- l pieces
 - square piece
 - detect when rows are completed and remove them
 - collision detection with other pieces on the board

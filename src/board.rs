@@ -1,7 +1,6 @@
 use crate::colors;
 use crate::geometry::{Position, Rect};
-use crate::pieces::{bar::Bar, square::Square};
-use crate::pieces::piece::Piece;
+use crate::pieces::{Bar, LPieceLeft, LPieceRight, Piece, Square, ZPieceLeft, ZPieceRight};
 use rand::prelude::*;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -243,11 +242,19 @@ impl Board {
 
     fn new_active_piece(&mut self) {
         let mut rng = thread_rng();
-        let next = rng.gen_range(0, 9);
-        if next > 5 {
+        let next = rng.gen_range(0, 300);
+        if next > 250 {
+            self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
+        } else if next > 200 {
+            self.active_piece = Box::new(ZPieceLeft::new(self.cols / 2, 1));
+        } else if next > 150 {
             self.active_piece = Box::new(Bar::new(self.cols / 2, 1));
-        } else {
+        } else if next > 100 {
             self.active_piece = Box::new(Square::new(self.cols / 2, 1));
+        } else if next > 50 {
+            self.active_piece = Box::new(LPieceLeft::new(self.cols / 2, 1));
+        } else {
+            self.active_piece = Box::new(LPieceRight::new(self.cols / 2, 1));
         }
         self.last_drop = 0f64;
     }
