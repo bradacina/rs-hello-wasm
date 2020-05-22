@@ -17,8 +17,6 @@ pub struct ZPieceRight {
     origin: Position,
 }
 
-TODO: fix projection
-
 #[derive(Serialize, Copy, Clone)]
 enum Orientation {
     Horizontal,
@@ -71,8 +69,8 @@ impl Piece for ZPieceRight {
             Orientation::Horizontal => vec![
                 self.origin + (1, 0),
                 self.origin,
-                self.origin + (0, -1),
-                self.origin + (-1, -1),
+                self.origin + (0, 1),
+                self.origin + (-1, 1),
             ],
             Orientation::Vertical => vec![
                 self.origin + (0, -1),
