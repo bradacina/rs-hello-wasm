@@ -8,6 +8,7 @@ mod board;
 mod colors;
 mod geometry;
 mod pieces;
+mod animations;
 
 use board::Board;
 

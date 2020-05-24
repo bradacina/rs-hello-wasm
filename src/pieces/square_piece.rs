@@ -7,31 +7,31 @@ use std::fmt::Display;
 use wasm_bindgen::prelude::*;
 
 #[derive(Serialize, Copy, Clone)]
-pub struct Square {
-    origin: Position,
+pub struct SquarePiece {
+    origin: Position<i32>,
 }
 
-impl Square {
+impl SquarePiece {
     pub fn new(x: i32, y: i32) -> Self {
-        Square {
+        SquarePiece {
             origin: Position { x, y },
         }
     }
 }
 
-impl ClonePiece for Square {
+impl ClonePiece for SquarePiece {
     fn clone_piece(&self) -> Box<dyn Piece> {
         Box::new(self.clone())
     }
 }
 
-impl Display for Square {
+impl Display for SquarePiece {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         f.write_str(&serde_json::to_string(self).expect("could not convert to json"))
     }
 }
 
-impl Piece for Square {
+impl Piece for SquarePiece {
     fn bounding_box(&self) -> Rect<i32> {
         Rect {
             x1: self.origin.x,
@@ -41,7 +41,7 @@ impl Piece for Square {
         }
     }
 
-    fn mask(&self) -> std::vec::Vec<Position> {
+    fn mask(&self) -> std::vec::Vec<Position<i32>> {
         vec![
             self.origin,
             self.origin + (0, 1),
@@ -67,7 +67,7 @@ impl Piece for Square {
         self.origin.y = y;
     }
 
-    fn get_origin(&self) -> Position {
+    fn get_origin(&self) -> Position<i32> {
         self.origin
     }
 

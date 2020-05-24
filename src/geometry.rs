@@ -10,14 +10,14 @@ pub struct Rect<T> {
 }
 
 #[derive(Serialize, Copy, Clone)]
-pub struct Position {
-    pub x: i32,
-    pub y: i32,
+pub struct Position<R> {
+    pub x: R,
+    pub y: R,
 }
 
-impl Add<(i32, i32)> for Position {
+impl<R> Add<(R, R)> for Position<R> where R: std::ops::Add<Output=R> {
     type Output = Self;
-    fn add(self, rhs: (i32, i32)) -> Self::Output {
+    fn add(self, rhs: (R, R)) -> Self::Output {
         Position {
             x: self.x + rhs.0,
             y: self.y + rhs.1,
@@ -25,8 +25,8 @@ impl Add<(i32, i32)> for Position {
     }
 }
 
-impl From<Position> for (i32, i32) {
-    fn from(position: Position) -> Self {
+impl<R> From<Position<R>> for (R, R) {
+    fn from(position: Position<R>) -> Self {
         (position.x, position.y)
     }
 }

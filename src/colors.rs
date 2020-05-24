@@ -13,3 +13,6 @@ pub const ZPIECE_STROKE: &'static str = "rgb(0, 200 , 200)";
 pub const ZPIECE_FILL: &'static str = "rgb(0, 100, 100)";
 
 pub const PROJECTION_STROKE: &'static str = "rgb(255, 255, 255)";
+
+pub const CELL_COMPLETE_COLOR: &'static str = "rgb(255,255,255)";
+pub const CELL_COMPLETE_FILL: &'static str = "rgb(255,255,255)";

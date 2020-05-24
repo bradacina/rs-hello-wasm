@@ -1,6 +1,10 @@
+use crate::animations::{Animation, CellCompleteAnimation};
 use crate::colors;
 use crate::geometry::{Position, Rect};
-use crate::pieces::{Bar, LPieceLeft, LPieceRight, Piece, Square, ZPieceLeft, ZPieceRight};
+use crate::pieces::{
+    LPieceLeft, LPieceRight, LinePiece, Piece, SquarePiece, ZPieceLeft,
+    ZPieceRight, /*TrianglePiece*/
+};
 use rand::prelude::*;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -35,6 +39,8 @@ pub struct Board {
     is_paused: bool,
 
     last_drop: f64,
+
+    animations: Vec<Box<dyn Animation>>,
 }
 
 impl Board {
@@ -53,10 +59,11 @@ impl Board {
             origin_x,
             origin_y,
 
-            active_piece: Box::new(Bar::new(2, 15)),
+            active_piece: Box::new(LinePiece::new(2, 15)),
             keys: Vec::with_capacity(4),
             is_paused: Default::default(),
             last_drop: 0f64,
+            animations: Vec::with_capacity(10),
         }
     }
 
@@ -95,7 +102,7 @@ impl Board {
     }
 
     // projects a piece down to the lowest point it can reach
-    fn project_piece(&self, piece: &Box<dyn Piece>) -> Vec<Position> {
+    fn project_piece(&self, piece: &Box<dyn Piece>) -> Vec<Position<i32>> {
         let mut placed_piece = piece.clone();
         let (origin_x, origin_y) = placed_piece.get_origin().into();
         // todo: optimize this by projecting the mask down on the board
@@ -129,7 +136,7 @@ impl Board {
         return true;
     }
 
-    fn is_colliding(&self, mask: &Vec<Position>) -> bool {
+    fn is_colliding(&self, mask: &Vec<Position<i32>>) -> bool {
         for item in mask {
             if self.cells[item.y as usize][item.x as usize] {
                 return true;
@@ -213,9 +220,21 @@ impl Board {
         }
 
         for to_remove in complete_rows {
+            self.animations.push(Box::new(CellCompleteAnimation::new(
+                Position {
+                    x: self.origin_x,
+                    y: self.origin_y + to_remove as f64 * self.pixels_per_cell as f64,
+                },
+                time,
+                3000.0,
+            )));
             self.cells.remove(to_remove);
             self.cells
                 .insert(0, (0..self.cols).map(|_| false).collect());
+        }
+
+        for animation in self.animations.iter_mut() {
+            animation.update(time);
         }
     }
 
@@ -242,15 +261,18 @@ impl Board {
 
     fn new_active_piece(&mut self) {
         let mut rng = thread_rng();
-        let next = rng.gen_range(0, 300);
-        if next > 250 {
+        let next = rng.gen_range(0, 350);
+        if next > 300 {
+            //self.active_piece = Box::new(TrianglePiece::new(self.cols / 2, 1));
+            self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
+        } else if next > 250 {
             self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
         } else if next > 200 {
             self.active_piece = Box::new(ZPieceLeft::new(self.cols / 2, 1));
         } else if next > 150 {
-            self.active_piece = Box::new(Bar::new(self.cols / 2, 1));
+            self.active_piece = Box::new(LinePiece::new(self.cols / 2, 1));
         } else if next > 100 {
-            self.active_piece = Box::new(Square::new(self.cols / 2, 1));
+            self.active_piece = Box::new(SquarePiece::new(self.cols / 2, 1));
         } else if next > 50 {
             self.active_piece = Box::new(LPieceLeft::new(self.cols / 2, 1));
         } else {
@@ -368,6 +390,11 @@ impl Board {
         }
 
         context.stroke();
+
+        // draw animations
+        for animation in &self.animations {
+            animation.draw(context, 0.0, 0.0, self.pixels_per_cell as f64);
+        }
     }
 
     fn relative_x(&self, x: f64) -> f64 {

@@ -14,7 +14,7 @@ use crate::geometry::{Position, Rect};
 #[derive(Serialize, Copy, Clone)]
 pub struct ZPieceLeft {
     orientation: Orientation,
-    origin: Position,
+    origin: Position<i32>,
 }
 
 #[derive(Serialize, Copy, Clone)]
@@ -64,7 +64,7 @@ impl Piece for ZPieceLeft {
         }
     }
 
-    fn mask(&self) -> Vec<Position> {
+    fn mask(&self) -> Vec<Position<i32>> {
         match self.orientation {
             Orientation::Horizontal => vec![
                 self.origin + (-1, 0),
@@ -105,7 +105,7 @@ impl Piece for ZPieceLeft {
         self.origin.y = y;
     }
 
-    fn get_origin(&self) -> Position {
+    fn get_origin(&self) -> Position<i32> {
         self.origin
     }
 

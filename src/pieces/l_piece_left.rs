@@ -14,7 +14,7 @@ use crate::geometry::{Position, Rect};
 #[derive(Serialize, Copy, Clone)]
 pub struct LPieceLeft {
     orientation: Orientation,
-    origin: Position,
+    origin: Position<i32>,
 }
 
 /// There are four possible orientations for LPieceLeft and the names for these orientations come
@@ -80,7 +80,7 @@ impl Piece for LPieceLeft {
         }
     }
 
-    fn mask(&self) -> Vec<Position> {
+    fn mask(&self) -> Vec<Position<i32>> {
         match self.orientation {
             Orientation::Up => vec![
                 self.origin + (-1, 1),
@@ -140,7 +140,7 @@ impl Piece for LPieceLeft {
         self.origin.y = y;
     }
 
-    fn get_origin(&self) -> Position {
+    fn get_origin(&self) -> Position<i32> {
         self.origin
     }
 

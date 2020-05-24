@@ -9,9 +9,9 @@ use crate::colors;
 use crate::geometry::{Position, Rect};
 
 #[derive(Serialize, Copy, Clone)]
-pub struct Bar {
+pub struct LinePiece {
     orientation: Orientation,
-    origin: Position,
+    origin: Position<i32>,
 }
 
 #[derive(Serialize, Copy, Clone)]
@@ -20,30 +20,30 @@ enum Orientation {
     Vertical,
 }
 
-impl Bar {
+impl LinePiece {
     pub fn new(x: i32, y: i32) -> Self {
         let origin = Position { x, y };
 
-        Bar {
+        LinePiece {
             orientation: Orientation::Vertical,
             origin,
         }
     }
 }
 
-impl ClonePiece for Bar {
+impl ClonePiece for LinePiece {
     fn clone_piece(&self) -> Box<dyn Piece> {
         Box::new(self.clone())
     }
 }
 
-impl Display for Bar {
+impl Display for LinePiece {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         f.write_str(&serde_json::to_string(self).expect("could not convert to json"))
     }
 }
 
-impl Piece for Bar {
+impl Piece for LinePiece {
     fn bounding_box(&self) -> Rect<i32> {
         match self.orientation {
             Orientation::Horizontal => Rect {
@@ -61,7 +61,7 @@ impl Piece for Bar {
         }
     }
 
-    fn mask(&self) -> Vec<Position> {
+    fn mask(&self) -> Vec<Position<i32>> {
         match self.orientation {
             Orientation::Horizontal => vec![
                 self.origin + (-1, 0),
@@ -102,7 +102,7 @@ impl Piece for Bar {
         self.origin.y = y;
     }
 
-    fn get_origin(&self) -> Position {
+    fn get_origin(&self) -> Position<i32> {
         self.origin
     }
 
