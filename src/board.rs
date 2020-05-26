@@ -3,7 +3,7 @@ use crate::colors;
 use crate::geometry::{Position, Rect};
 use crate::pieces::{
     LPieceLeft, LPieceRight, LinePiece, Piece, SquarePiece, ZPieceLeft,
-    ZPieceRight, /*TrianglePiece*/
+    ZPieceRight, TrianglePiece
 };
 use rand::prelude::*;
 use serde::Serialize;
@@ -263,8 +263,8 @@ impl Board {
         let mut rng = thread_rng();
         let next = rng.gen_range(0, 350);
         if next > 300 {
-            //self.active_piece = Box::new(TrianglePiece::new(self.cols / 2, 1));
-            self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
+            self.active_piece = Box::new(TrianglePiece::new(self.cols / 2, 1));
+            // self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
         } else if next > 250 {
             self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
         } else if next > 200 {

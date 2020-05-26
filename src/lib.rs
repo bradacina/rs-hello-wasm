@@ -1,6 +1,5 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-// use serde::Serialize;
 use std::cell::RefCell;
 use std::rc::Rc;
 

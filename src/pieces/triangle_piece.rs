@@ -12,7 +12,7 @@ use crate::geometry::{Position, Rect};
 #[derive(Serialize, Copy, Clone)]
 pub struct TrianglePiece {
     orientation: Orientation,
-    origin: Position,
+    origin: Position<i32>,
 }
 
 /// There are four possible orientations for TrianglePiece and the names for these orientations come
@@ -78,12 +78,12 @@ impl Piece for TrianglePiece {
         }
     }
 
-    fn mask(&self) -> Vec<Position> {
+    fn mask(&self) -> Vec<Position<i32>> {
         match self.orientation {
             Orientation::Up => vec![
                 self.origin + (-1, 0),
                 self.origin,
-                self.origin + (0, 1),
+                self.origin + (1, 0),
                 self.origin + (0, -1),
             ],
             Orientation::Down => vec![
@@ -137,8 +137,8 @@ impl Piece for TrianglePiece {
         self.origin.x = x;
         self.origin.y = y;
     }
-
-    fn get_origin(&self) -> Position {
+    
+    fn get_origin(&self) -> Position<i32> {
         self.origin
     }
 
@@ -149,7 +149,6 @@ impl Piece for TrianglePiece {
         origin_y: f64,
         pixels_per_cell: f64,
     ) {
-        todo: implement this
         context
             .set_line_dash(&JsValue::from_serde(&([] as [i32; 0])).unwrap())
             .unwrap();
@@ -161,43 +160,48 @@ impl Piece for TrianglePiece {
 
         match self.orientation {
             Orientation::Up => {
-                context.move_to(origin_x, origin_y - pixels_per_cell);
-                context.line_to(origin_x + pixels_per_cell, origin_y - pixels_per_cell);
-                context.line_to(origin_x + pixels_per_cell, origin_y + 2.0 * pixels_per_cell);
-                context.line_to(origin_x - pixels_per_cell, origin_y + 2.0 * pixels_per_cell);
-                context.line_to(origin_x - pixels_per_cell, origin_y + pixels_per_cell);
-                context.line_to(origin_x, origin_y + pixels_per_cell);
-                context.line_to(origin_x, origin_y - pixels_per_cell);
-            }
-            Orientation::Down => {
-                context.move_to(origin_x, origin_y - pixels_per_cell);
-                context.line_to(origin_x + 2.0 * pixels_per_cell, origin_y - pixels_per_cell);
-                context.line_to(origin_x + 2.0 * pixels_per_cell, origin_y);
-                context.line_to(origin_x + pixels_per_cell, origin_y);
-                context.line_to(origin_x + pixels_per_cell, origin_y + 2.0 * pixels_per_cell);
-                context.line_to(origin_x, origin_y + 2.0 * pixels_per_cell);
-                context.line_to(origin_x, origin_y - pixels_per_cell);
-            }
-            Orientation::Left => {
-                context.move_to(origin_x - pixels_per_cell, origin_y);
-                context.line_to(origin_x + 2.0 * pixels_per_cell, origin_y);
-                context.line_to(
-                    origin_x + 2.0 * pixels_per_cell,
-                    origin_y + 2.0 * pixels_per_cell,
-                );
-                context.line_to(origin_x + pixels_per_cell, origin_y + 2.0 * pixels_per_cell);
-                context.line_to(origin_x + pixels_per_cell, origin_y + pixels_per_cell);
-                context.line_to(origin_x - pixels_per_cell, origin_y + pixels_per_cell);
-                context.line_to(origin_x - pixels_per_cell, origin_y);
-            }
-            Orientation::Right => {
                 context.move_to(origin_x, origin_y);
+                context.line_to(origin_x, origin_y - pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y - pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y);
                 context.line_to(origin_x + 2.0 * pixels_per_cell, origin_y);
                 context.line_to(origin_x + 2.0 * pixels_per_cell, origin_y + pixels_per_cell);
                 context.line_to(origin_x - pixels_per_cell, origin_y + pixels_per_cell);
-                context.line_to(origin_x - pixels_per_cell, origin_y - pixels_per_cell);
-                context.line_to(origin_x, origin_y - pixels_per_cell);
+                context.line_to(origin_x - pixels_per_cell, origin_y);
                 context.line_to(origin_x, origin_y);
+            }
+            Orientation::Down => {
+                context.move_to(origin_x - pixels_per_cell, origin_y);
+                context.line_to(origin_x + 2.0 * pixels_per_cell, origin_y);
+                context.line_to(origin_x + 2.0 * pixels_per_cell, origin_y + pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y + pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y + 2.0 * pixels_per_cell);
+                context.line_to(origin_x, origin_y + 2.0 * pixels_per_cell);
+                context.line_to(origin_x, origin_y + pixels_per_cell);
+                context.line_to(origin_x - pixels_per_cell, origin_y + pixels_per_cell);
+                context.line_to(origin_x - pixels_per_cell, origin_y);
+            }
+            Orientation::Left => {
+                context.move_to(origin_x, origin_y);
+                context.line_to(origin_x, origin_y - pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y - pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y + 2.0 * pixels_per_cell);
+                context.line_to(origin_x, origin_y + 2.0 * pixels_per_cell);
+                context.line_to(origin_x, origin_y + pixels_per_cell);
+                context.line_to(origin_x - pixels_per_cell, origin_y + pixels_per_cell);
+                context.line_to(origin_x - pixels_per_cell, origin_y);
+                context.line_to(origin_x, origin_y);
+            }
+            Orientation::Right => {
+                context.move_to(origin_x, origin_y - pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y - pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y);
+                context.line_to(origin_x + 2.0 * pixels_per_cell, origin_y);
+                context.line_to(origin_x + 2.0 * pixels_per_cell, origin_y + pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y + pixels_per_cell);
+                context.line_to(origin_x + pixels_per_cell, origin_y + 2.0 * pixels_per_cell);
+                context.line_to(origin_x, origin_y + 2.0 * pixels_per_cell);
+                context.line_to(origin_x, origin_y - pixels_per_cell);
             }
         }
 
