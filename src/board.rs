@@ -1,9 +1,8 @@
-use crate::animations::{Animation, CellCompleteAnimation};
+use crate::animations::{Animation, Flash};
 use crate::colors;
 use crate::geometry::{Position, Rect};
 use crate::pieces::{
-    LPieceLeft, LPieceRight, LinePiece, Piece, SquarePiece, ZPieceLeft,
-    ZPieceRight, TrianglePiece
+    LPieceLeft, LPieceRight, LinePiece, Piece, SquarePiece, TrianglePiece, ZPieceLeft, ZPieceRight,
 };
 use rand::prelude::*;
 use serde::Serialize;
@@ -63,7 +62,7 @@ impl Board {
             keys: Vec::with_capacity(4),
             is_paused: Default::default(),
             last_drop: 0f64,
-            animations: Vec::with_capacity(10),
+            animations: Vec::with_capacity(40),
         }
     }
 
@@ -220,14 +219,14 @@ impl Board {
         }
 
         for to_remove in complete_rows {
-            self.animations.push(Box::new(CellCompleteAnimation::new(
-                Position {
-                    x: self.origin_x,
-                    y: self.origin_y + to_remove as f64 * self.pixels_per_cell as f64,
-                },
-                time,
-                3000.0,
-            )));
+            for i in 0..10 {
+                self.animations.push(Box::new(Flash::new(
+                    self.origin_x + i as f64 * self.pixels_per_cell as f64,
+                    self.origin_y + to_remove as f64 * self.pixels_per_cell as f64,
+                    time,
+                    1500.0,
+                )));
+            }
             self.cells.remove(to_remove);
             self.cells
                 .insert(0, (0..self.cols).map(|_| false).collect());
@@ -264,7 +263,7 @@ impl Board {
         let next = rng.gen_range(0, 350);
         if next > 300 {
             self.active_piece = Box::new(TrianglePiece::new(self.cols / 2, 1));
-            // self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
+        // self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
         } else if next > 250 {
             self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
         } else if next > 200 {
