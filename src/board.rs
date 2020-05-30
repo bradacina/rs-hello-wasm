@@ -9,6 +9,7 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 const DROP_TIME: f64 = 50000f64;
+const ROW_SCORE: u32 = 1000;
 
 enum Rotation {
     Left,
@@ -24,10 +25,13 @@ enum Move {
 pub struct Board {
     rows: i32,
     cols: i32,
+
     cells: Vec<Vec<bool>>, // indexes are [row][col]
+
     pixels_per_cell: i32,
     pixel_width: f64,
     pixel_height: f64,
+
     origin_x: f64, // x coord on context where the board resides
     origin_y: f64, // y coord on context where the board resides
 
@@ -40,6 +44,8 @@ pub struct Board {
     last_drop: f64,
 
     animations: Vec<Box<dyn Animation>>,
+
+    pub score: u32,
 }
 
 impl Board {
@@ -63,6 +69,7 @@ impl Board {
             is_paused: Default::default(),
             last_drop: 0f64,
             animations: Vec::with_capacity(40),
+            score: 0,
         }
     }
 
@@ -90,7 +97,7 @@ impl Board {
         }
     }
 
-    // sends the active piece to the bottom
+    /// Sends the active piece to the bottom
     fn place_piece(&mut self) {
         let mask = self.project_piece(&self.active_piece);
         for item in mask {
@@ -100,12 +107,12 @@ impl Board {
         self.new_active_piece();
     }
 
-    // projects a piece down to the lowest point it can reach
+    /// Projects a piece down to the lowest point it can reach
     fn project_piece(&self, piece: &Box<dyn Piece>) -> Vec<Position<i32>> {
         let mut placed_piece = piece.clone();
         let (origin_x, origin_y) = placed_piece.get_origin().into();
         // todo: optimize this by projecting the mask down on the board
-        // until we encounter a piece or the edge
+        // until we encounter a piece or the bottom
 
         for y in origin_y..self.rows {
             placed_piece.set_origin(origin_x, y);
@@ -215,6 +222,7 @@ impl Board {
             let is_complete = self.cells[y].iter().all(|val| *val);
             if is_complete {
                 complete_rows.push(y);
+                self.score += ROW_SCORE;
             }
         }
 

@@ -120,12 +120,20 @@ pub fn run() -> Result<(), JsValue> {
         board.process_input();
         board.update(time);
         draw_background(&context, time);
+        draw_score(&context, board.score);
         board.draw(&context);
         request_animation_frame(f.borrow().as_ref().unwrap());
     }) as Box<dyn FnMut(f64)>));
 
     request_animation_frame(g.borrow().as_ref().unwrap());
     Ok(())
+}
+
+fn draw_score(context: &web_sys::CanvasRenderingContext2d, score: u32) {
+
+    context.set_fill_style(&JsValue::from_str("black"));
+    context.set_font("24px sans-serif");
+    context.fill_text(&format!("Score: {}", score.to_string()), 10.0, 40.0).unwrap();
 }
 
 pub fn draw_background(context: &web_sys::CanvasRenderingContext2d, time: f64) {
@@ -140,5 +148,7 @@ pub fn draw_background(context: &web_sys::CanvasRenderingContext2d, time: f64) {
     context.set_font("24px sans-serif");
     context.set_text_baseline("top");
 
-    context.fill_text(&time.to_string(), 10.0, 10.0).unwrap();
+    let time_string = time.to_string();
+
+    context.fill_text(&time_string, 10.0, 10.0).unwrap();
 }
