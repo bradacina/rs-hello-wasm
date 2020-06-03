@@ -113,7 +113,7 @@ pub fn run() -> Result<(), JsValue> {
     // setup the request_animation_frame closure
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time: f64| {
         let mut board = the_board.borrow_mut();
-        if board.is_paused() {
+        if board.is_paused() || board.is_game_over(){
             return;
         }
 

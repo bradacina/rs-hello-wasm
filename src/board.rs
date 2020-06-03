@@ -29,23 +29,27 @@ pub struct Board {
     cells: Vec<Vec<bool>>, // indexes are [row][col]
 
     pixels_per_cell: i32,
-    pixel_width: f64,
-    pixel_height: f64,
+    pixel_width: f64,  // width of board in pixels
+    pixel_height: f64, // height of board in pixels
 
     origin_x: f64, // x coord on context where the board resides
     origin_y: f64, // y coord on context where the board resides
 
-    active_piece: Box<dyn Piece>,
+    active_piece: Box<dyn Piece>, // the piece that the player is manipulating
 
-    keys: Vec<String>,
+    keys: Vec<String>, // a buffer of key presses since we last processed input
 
     is_paused: bool,
+    paused_rendered: bool,
+    paused_at: f64, // the game time when the game was paused - used to calculate reminder of last_drop
+    last_processed_tick: f64, // the last game time when we performed an update
+    is_game_over: bool,
+    game_over_rendered: bool,
+    pub score: u32,
 
-    last_drop: f64,
+    last_drop: f64, // what was the game time when the active_piece was last dropped by 1 square
 
     animations: Vec<Box<dyn Animation>>,
-
-    pub score: u32,
 }
 
 impl Board {
@@ -67,14 +71,19 @@ impl Board {
             active_piece: Box::new(LinePiece::new(2, 15)),
             keys: Vec::with_capacity(4),
             is_paused: Default::default(),
+            paused_rendered: false,
+            paused_at: 0f64,
+            last_processed_tick: 0f64,
             last_drop: 0f64,
             animations: Vec::with_capacity(40),
             score: 0,
+            is_game_over: false,
+            game_over_rendered: false,
         }
     }
 
     pub fn keydown(&mut self, event: &web_sys::KeyboardEvent) {
-        if self.is_paused {
+        if self.is_paused || self.is_game_over {
             return;
         }
 
@@ -134,6 +143,7 @@ impl Board {
         return placed_piece.mask();
     }
 
+    /// Is the bounding box bb of a piece inside the board
     fn is_inside_board(&self, bb: &Rect<i32>) -> bool {
         if bb.x1 < 0 || bb.x2 >= self.cols || bb.y1 < 0 || bb.y2 >= self.rows {
             return false;
@@ -142,6 +152,7 @@ impl Board {
         return true;
     }
 
+    /// Is the mask of a piece colding with any existing pieces on the board
     fn is_colliding(&self, mask: &Vec<Position<i32>>) -> bool {
         for item in mask {
             if self.cells[item.y as usize][item.x as usize] {
@@ -209,6 +220,11 @@ impl Board {
     }
 
     pub fn update(&mut self, time: f64) {
+        self.last_processed_tick = time;
+        if self.is_paused || self.is_game_over {
+            return;
+        }
+
         if self.last_drop == 0f64 {
             self.last_drop = time;
         } else if time - self.last_drop > DROP_TIME {
@@ -269,26 +285,34 @@ impl Board {
     fn new_active_piece(&mut self) {
         let mut rng = thread_rng();
         let next = rng.gen_range(0, 350);
+        let next_active_piece: Box<dyn Piece>;
         if next > 300 {
-            self.active_piece = Box::new(TrianglePiece::new(self.cols / 2, 1));
-        // self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
+            next_active_piece = Box::new(TrianglePiece::new(self.cols / 2, 1));
         } else if next > 250 {
-            self.active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
+            next_active_piece = Box::new(ZPieceRight::new(self.cols / 2, 1));
         } else if next > 200 {
-            self.active_piece = Box::new(ZPieceLeft::new(self.cols / 2, 1));
+            next_active_piece = Box::new(ZPieceLeft::new(self.cols / 2, 1));
         } else if next > 150 {
-            self.active_piece = Box::new(LinePiece::new(self.cols / 2, 1));
+            next_active_piece = Box::new(LinePiece::new(self.cols / 2, 1));
         } else if next > 100 {
-            self.active_piece = Box::new(SquarePiece::new(self.cols / 2, 1));
+            next_active_piece = Box::new(SquarePiece::new(self.cols / 2, 1));
         } else if next > 50 {
-            self.active_piece = Box::new(LPieceLeft::new(self.cols / 2, 1));
+            next_active_piece = Box::new(LPieceLeft::new(self.cols / 2, 1));
         } else {
-            self.active_piece = Box::new(LPieceRight::new(self.cols / 2, 1));
+            next_active_piece = Box::new(LPieceRight::new(self.cols / 2, 1));
         }
+
         self.last_drop = 0f64;
+
+        let mask = next_active_piece.mask();
+        if self.is_colliding(&mask) {
+            self.is_game_over = true;
+        } else {
+            self.active_piece = next_active_piece;
+        }
     }
 
-    pub fn draw(&self, context: &web_sys::CanvasRenderingContext2d) {
+    pub fn draw(&mut self, context: &web_sys::CanvasRenderingContext2d) {
         // draw border
         context.set_stroke_style(&colors::BORDER.into());
         context.set_line_width(1.0);
@@ -356,51 +380,73 @@ impl Board {
         }
 
         // draw active piece
-        let origin = self.active_piece.get_origin();
-        self.active_piece.draw(
-            context,
-            self.origin_x + (origin.x * self.pixels_per_cell) as f64,
-            self.origin_y + (origin.y * self.pixels_per_cell) as f64,
-            self.pixels_per_cell as f64,
-        );
-
-        // draw the projection
-        context.set_stroke_style(&colors::PROJECTION_STROKE.into());
-        context
-            .set_line_dash(&JsValue::from_serde(&vec![3, 3]).unwrap())
-            .unwrap();
-        context.begin_path();
-
-        let mask = self.project_piece(&self.active_piece);
-
-        for item in mask {
-            context.move_to(
-                self.origin_x + (item.x * self.pixels_per_cell) as f64,
-                self.origin_y + (item.y * self.pixels_per_cell) as f64,
-            );
-            context.line_to(
-                self.origin_x + ((item.x + 1) * self.pixels_per_cell) as f64,
-                self.origin_y + (item.y * self.pixels_per_cell) as f64,
-            );
-            context.line_to(
-                self.origin_x + ((item.x + 1) * self.pixels_per_cell) as f64,
-                self.origin_y + ((item.y + 1) * self.pixels_per_cell) as f64,
-            );
-            context.line_to(
-                self.origin_x + (item.x * self.pixels_per_cell) as f64,
-                self.origin_y + ((item.y + 1) * self.pixels_per_cell) as f64,
-            );
-            context.line_to(
-                self.origin_x + (item.x * self.pixels_per_cell) as f64,
-                self.origin_y + (item.y * self.pixels_per_cell) as f64,
+        if !self.is_game_over {
+            let origin = self.active_piece.get_origin();
+            self.active_piece.draw(
+                context,
+                self.origin_x + (origin.x * self.pixels_per_cell) as f64,
+                self.origin_y + (origin.y * self.pixels_per_cell) as f64,
+                self.pixels_per_cell as f64,
             );
         }
 
-        context.stroke();
+        // draw the projection
+        if !self.is_game_over {
+            context.set_stroke_style(&colors::PROJECTION_STROKE.into());
+            context
+                .set_line_dash(&JsValue::from_serde(&vec![3, 3]).unwrap())
+                .unwrap();
+            context.begin_path();
+
+            let mask = self.project_piece(&self.active_piece);
+
+            for item in mask {
+                context.move_to(
+                    self.origin_x + (item.x * self.pixels_per_cell) as f64,
+                    self.origin_y + (item.y * self.pixels_per_cell) as f64,
+                );
+                context.line_to(
+                    self.origin_x + ((item.x + 1) * self.pixels_per_cell) as f64,
+                    self.origin_y + (item.y * self.pixels_per_cell) as f64,
+                );
+                context.line_to(
+                    self.origin_x + ((item.x + 1) * self.pixels_per_cell) as f64,
+                    self.origin_y + ((item.y + 1) * self.pixels_per_cell) as f64,
+                );
+                context.line_to(
+                    self.origin_x + (item.x * self.pixels_per_cell) as f64,
+                    self.origin_y + ((item.y + 1) * self.pixels_per_cell) as f64,
+                );
+                context.line_to(
+                    self.origin_x + (item.x * self.pixels_per_cell) as f64,
+                    self.origin_y + (item.y * self.pixels_per_cell) as f64,
+                );
+            }
+
+            context.stroke();
+        }
 
         // draw animations
         for animation in &self.animations {
             animation.draw(context, 0.0, 0.0, self.pixels_per_cell as f64);
+        }
+
+        if self.is_paused {
+            self.paused_rendered = true;
+            web_sys::console::log_1(&"drawing pause".into());
+            context.set_fill_style(&"white".into());
+            context.set_font("24px sans-serif");
+            context
+                .fill_text("Paused", self.relative_x(10.0), self.relative_y(10.0))
+                .unwrap();
+        }
+        if self.is_game_over {
+            self.game_over_rendered = true;
+            context.set_fill_style(&"white".into());
+            context.set_font("24px sans-serif");
+            context
+                .fill_text("Game Over", self.relative_x(10.0), self.relative_y(10.0))
+                .unwrap();
         }
     }
 
@@ -413,14 +459,26 @@ impl Board {
     }
 
     pub fn pause(&mut self) {
+        if self.is_game_over {
+            return;
+        }
         self.is_paused = true;
+        self.paused_at = self.last_processed_tick;
     }
 
     pub fn resume(&mut self) {
+        if self.is_game_over {
+            return;
+        }
         self.is_paused = false;
+        self.last_drop = self.last_processed_tick - (self.paused_at - self.last_drop);
     }
 
     pub fn is_paused(&self) -> bool {
-        self.is_paused
+        self.is_paused && self.paused_rendered
+    }
+
+    pub fn is_game_over(&self) -> bool {
+        self.is_game_over && self.game_over_rendered
     }
 }
